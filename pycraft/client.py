@@ -92,6 +92,18 @@ class PyModClient:
         # 注意：Level 类需要 client 引用，为了避免循环导入，将导入放在方法内
         from pycraft import Level
         return [Level(self, name) for name in level_names]
+    
+    def overworld(self):
+        from pycraft import Level
+        return Level(self, "minecraft:overworld")
+
+    def nether(self):
+        from pycraft import Level
+        return Level(self, "minecraft:the_nether")
+
+    def end(self):
+        from pycraft import Level
+        return Level(self, "minecraft:the_end")
 
 # 使用示例
 async def main():
@@ -99,8 +111,15 @@ async def main():
     await client.connect()
     try:
         # 查询维度列表
-        resp = await client.get_levels()
-        print("Available levels:", resp)
+        levels = await client.get_levels()
+        print("Available levels:", levels)
+        # 取第一个维度
+        level_name = levels[0].name
+        # 获取时间
+        level = levels[0]
+        time = await level.get_time()
+        print("Game time:", time)
+
     finally:
         await client.close()
 
