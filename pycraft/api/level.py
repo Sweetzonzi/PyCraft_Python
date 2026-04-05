@@ -77,26 +77,58 @@ class Level:
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
         
-    async def spawn_entity(self, entity_type: str, x: float, y: float, z: float):
+    async def spawn_entity(self, entity_type: str, x: float, y: float, z: float, is_agent: bool = False):
         """
-        生成实体
+        生成实体 / Agent
         """
         from pycraft.api.entity import Entity
+
         if ":" not in entity_type:
             entity_type = f"minecraft:{entity_type}"
+
         payload = {
             "level": self.name,
             "x": float(x),
             "y": float(y),
             "z": float(z),
-            "entity_type": entity_type
+            "entity_type": entity_type,
+            "is_agent": is_agent
         }
+
         resp = await self._client.request("spawn_entity", payload)
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
         entity_id = resp["data"]["id"]
         return Entity(self._client, self, entity_id, self.name)
     
+    async def get_entities(self, type: str = "all"):
+        """
+        获取实体列表
+        :param type: "all" / "monster"
+        :return: list[Entity]
+        """
+        from pycraft.api.entity import Entity
+        payload = {
+            "level": self.name,
+            "type": type
+        }
+        resp = await self._client.request("get_entities", payload)
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+        entities = []
+        for e in resp["data"]["entities"]:
+            entity = Entity(
+                self._client,
+                self,
+                e["id"],
+                self.name
+            )
+            entity.type = e["type"]
+            entity.pos = (e["x"], e["y"], e["z"])
+            entity.health = e["health"]
+            entities.append(entity)
+        return entities
+
     async def spawn_particle(self, x, y, z, particle="flame", count=1):
         resp = await self._client.request(
             "spawn_particle",
@@ -114,16 +146,19 @@ class Level:
     async def draw_path(self, points, color=0xFF0000, duration=200):
         """
         可视化路径
+
         :param points: [(x,y,z), ...]
         :param color: 0xRRGGBB
-        :param duration: tick（20tick=1秒）
+        :param duration: 预留
         """
         payload = {
             "points": [list(map(float, p)) for p in points],
             "color": int(color),
             "duration": int(duration)
         }
+
         resp = await self._client.request("draw_path", payload)
+
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
 

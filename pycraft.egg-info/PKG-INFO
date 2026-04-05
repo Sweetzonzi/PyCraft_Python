@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: pycraft
+Version: 0.1.0
+Summary: PyCraft Python API for Minecraft
+Requires-Python: >=3.9

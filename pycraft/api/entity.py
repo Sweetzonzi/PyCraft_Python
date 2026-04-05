@@ -53,17 +53,6 @@ class Entity:
         )
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
-        
-    async def move_smooth(entity, target, speed=0.2): # 这个函数也有点问题
-        while True:
-            x, y, z = await entity.get_pos()
-            dx = target[0] - x
-            dy = target[1] - y
-            dz = target[2] - z
-            if dx*dx + dy*dy + dz*dz < 0.01:
-                break
-            await entity.move_to(*target, speed=speed)
-            await asyncio.sleep(0.05)
     
     async def set_perspective(self, mode: int = 0) -> bool:
         """
@@ -92,3 +81,26 @@ class Entity:
         data = resp.get("data", {})
         return data["yaw"], data["pitch"]
     
+    async def attack(self, target) -> bool:
+        """
+        攻击实体
+        """
+        resp = await self._client.request(
+            "attack_entity",
+            {
+                "player_id": self.entity_id,
+                "target_id": target.entity_id
+            }
+        )
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+        return resp["data"]["hit"]
+
+    async def remove(self): # 似乎有些问题
+        """
+        删除实体
+        """
+        resp = await self._client.request("remove_entity", {"entity_id": self.entity_id})
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+        
