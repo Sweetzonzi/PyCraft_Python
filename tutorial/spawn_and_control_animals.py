@@ -1,5 +1,11 @@
 import asyncio
 import math
+import sys
+import os
+
+# 添加项目根目录到Python路径，确保可以导入本地开发的pycraft包
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from pycraft import PyModClient
 
 async def spawn_and_control_animal():
@@ -29,7 +35,9 @@ async def spawn_and_control_animal():
             x = px + radius * math.cos(angle)
             z = pz + radius * math.sin(angle)
             points.append((x, py, z))
-    
+        # 绘制路径
+        await level.draw_path(points, duration=20000)
+
         print("开始绕圈...")
         for i, (x, y, z) in enumerate(points):
             await animal.move_to(x, y, z, speed=0.2)

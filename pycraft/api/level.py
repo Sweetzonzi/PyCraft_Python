@@ -143,13 +143,13 @@ class Level:
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
         
-    async def draw_path(self, points, color=0xFF0000, duration=200):
+    async def draw_path(self, points, color=0xFFFFFFFF, duration=200):
         """
         可视化路径
 
         :param points: [(x,y,z), ...]
-        :param color: 0xRRGGBB
-        :param duration: 预留
+        :param color: 颜色，默认白色无透明度
+        :param duration: 持续时间(帧)
         """
         payload = {
             "points": [list(map(float, p)) for p in points],
