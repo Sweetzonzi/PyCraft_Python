@@ -86,6 +86,7 @@ async def main():
         output_limit = 0.3     # 每一帧允许的最大位移
 
         trajectory = []  # 存储玩家位置历史
+        pig_path = []  # 储存小猪的历史位置
         max_trajectory_points = 30  # 最多保留30个点（约1.5秒）
 
         # 主循环：持续追逐
@@ -130,18 +131,20 @@ async def main():
                 speed=0.25
             )
 
-            # 累积轨迹点
+            # 累积玩家轨迹点
             trajectory.append((player_x, player_y, player_z))
             if len(trajectory) > max_trajectory_points:
                 trajectory.pop(0)  # 移除最旧的点，保持长度
+            # 累积小猪轨迹点
+            pig_path.append((pig_x, pig_y, pig_z))
+            if len(pig_path) > max_trajectory_points:
+                pig_path.pop(0)
 
             # 绘制完整轨迹
             if len(trajectory) >= 2:
-                await overworld.draw_path(
-                    trajectory,      # 传递历史轨迹
-                    color=0x00FF00,  # 绿色
-                    duration=200     # 持续10秒
-                )
+                await overworld.draw_path(trajectory, duration=200)
+            if len(pig_path) >= 2:
+                await overworld.draw_path(pig_path, color=0xFFFF0000, duration=200)
 
             # 6. 为下一帧保存当前误差
             prev_error = Vec3(error.x, error.y, error.z)
