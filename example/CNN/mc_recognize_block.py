@@ -43,7 +43,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = CNN(num_classes=num_classes)
 model.load_state_dict(
-    torch.load("CNN\minecraft_blocks_new_model_2.pth", map_location=device)
+    torch.load("example\CNN\minecraft_blocks_new_model_2.pth", map_location=device)
 )
 model.to(device)
 model.eval()

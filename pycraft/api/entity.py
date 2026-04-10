@@ -53,6 +53,18 @@ class Entity:
         )
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
+        
+    async def set_overhead_view(self, enabled: bool = True, height: float = 10.0) -> bool:
+        """
+        开启/关闭俯视强制模式
+        enabled: True=开启俯视强制, False=关闭
+        height: 相机高度
+        """
+        resp = await self._client.request("set_overhead", {
+            "enabled": enabled,
+            "height": height
+        })
+        return resp.get("success", False)
     
     async def set_perspective(self, mode: int = 0) -> bool:
         """

@@ -121,9 +121,9 @@ class Maze:
         ox, oy, oz = self.origin
 
         await self.agent.teleport(
-            ox + x,
-            oy + 1,
-            oz + z
+            ox + x + 0.5,
+            oy + 1.5,
+            oz + z + 0.5
         )
 
     # step
@@ -140,12 +140,17 @@ class Maze:
         dx, dz = moves[action]
         nx, nz = x + dx, z + dz
 
-        reward = -0.04
-        done = False
+        # 计算距离变化（曼哈顿距离）
+        old_dist = abs(x - self.goal[0]) + abs(z - self.goal[1])
+        new_dist = abs(nx - self.goal[0]) + abs(nz - self.goal[1])
 
+        reward = -0.01
+        done = False
+        
+        # 边界检查
         if nx < 0 or nx >= self.rows or nz < 0 or nz >= self.cols:
             reward = -1
-
+        # 目标格子是墙
         elif self.maze[nx][nz] == 1:
             reward = -1
 
@@ -153,11 +158,17 @@ class Maze:
             self.agent_pos = (nx, nz)
             await self.teleport_agent()
 
+            # 距离奖励：靠近终点奖，远离罚
+            if new_dist < old_dist:
+                reward += 0.1   # 靠近 +0.1
+            elif new_dist > old_dist:
+                reward -= 0.1   # 远离 -0.1
+                
             if self.agent_pos == self.goal:
-                reward = 1
+                reward = 10     # 终点大奖
                 done = True
 
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.05)
         return self.agent_pos, reward, done
     
 async def update(env, RL):
@@ -184,7 +195,7 @@ async def main():
         level = client.overworld()
         players = await level.get_players()
         agent = players[0]
-        await agent.set_perspective(0)
+        await agent.set_overhead_view(True)
         env = Maze(client, level, agent)
         await env.build_maze()
         RL = QLearningTable(actions=list(range(env.n_actions)))
