@@ -68,7 +68,7 @@ def grab_center():
             "height": 128
         }
         img = np.array(sct.grab(bbox)) 
-        # Windows: RGB  Ubuntu: BGR
+        # mss截图默认返回BGR，通过[2,1,0]索引反转通道顺序转为RGB
         img = Image.fromarray(img[:, :, [2,1,0]]).convert("RGB")
         return img
 

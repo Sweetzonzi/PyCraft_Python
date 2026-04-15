@@ -223,10 +223,11 @@ async def render(level, x, z, y, bx, by, bz, env):
 # 主程序
 async def main():
     global player
-    mc = PyModClient(port=9586)
+    mc = PyModClient()
     await mc.connect()
     level = mc.overworld()
     player = (await level.get_players())[0]
+    await mc.set_overhead_view(True)
     bx, by, bz = map(int, await player.get_pos())
 
     await reset_mine(level, bx, by, bz)
