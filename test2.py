@@ -1,52 +1,69 @@
 import asyncio
-from pycraft import PyModClient
+from pycraft.client import PyModClient
+from pycraft.api.uav import UavEntity
+
+
+async def get_uav_list(client):
+    resp = await client.request("get_uav_list", {})
+    if not resp.get("success"):
+        raise Exception(resp.get("error_message"))
+    return resp["data"]["uavs"]
+
 
 async def main():
-    mc = PyModClient()
-    await mc.connect()
+    client = PyModClient("localhost", 8086)
+    await client.connect()
+    print("Connected to server")
     try:
-        overworld = mc.overworld()
+        # 获取 UAV 列表
+        uavs = await get_uav_list(client)
 
-        players = await overworld.get_players()
-        print(players)
-        player = players[0]
+        if len(uavs) == 0:
+            print("没有找到 UAV")
+            return
+        print("UAV列表:", uavs)
+        uav = UavEntity(client, uavs[2]["agent_id"])
 
-        time = await overworld.get_time()
-        print(time)
+        # 获取当前状态
+        state = await uav.get_state()
+        print("当前状态:", state)
 
-        await player.set_perspective(1)
-        pos1 = await player.get_pos()
-        print(pos1)
+        # 先悬停在当前高度
+        await uav.set_target(state["x"], state["y"], state["z"])
+        await asyncio.sleep(2)
 
-        # 生成小猪
-        pig = await overworld.spawn_entity(
-            "minecraft:pig",
-            -103.5, 67, 100.5
-        )
-        pig_id = pig.entity_id
-        print(pig_id)
+        # 起飞（升高）
+        print("起飞")
+        await uav.set_target(state["x"], state["y"] + 10, state["z"])
+        await asyncio.sleep(5)
 
-        # 持续追逐
-        while True:
-            # 获取小猪位置
-            px, py, pz = await pig.get_pos()
-            print(px)
-            print(py)
-            print(pz)
+        # 方形巡航路径
+        path = [
+            (state["x"] + 10, state["y"] + 10, state["z"]),
+            (state["x"] + 10, state["y"] + 10, state["z"] + 10),
+            (state["x"], state["y"] + 10, state["z"] + 10),
+            (state["x"], state["y"] + 10, state["z"]),
+        ]
 
-            # 获取玩家位置
-            player_pos = await player.get_pos()
-            print("Player:", player_pos, "Pig:", (px, py, pz))
+        print("开始巡航")
 
-            # 玩家移动到小猪
-            await player.move_to(px, py, pz, speed=0.25)
+        for point in path:
+            print("前往:", point)
+            await uav.set_target(*point)
+            await asyncio.sleep(5)
+            # 实时打印状态
+            state = await uav.get_state()
+            print("当前状态:", state)
 
-            # 画轨迹
-            await overworld.spawn_particle(px, py + 0.5, pz)
+        print("巡航结束，返回原点")
 
-            await asyncio.sleep(0.05) 
-
+        # 回到原点
+        await uav.set_target(state["x"], state["y"], state["z"])
+        await asyncio.sleep(5)
+        print("完成")
+    
     finally:
-        await mc.close()
+        await client.close()
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
