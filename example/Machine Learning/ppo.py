@@ -227,7 +227,7 @@ async def main():
     await mc.connect()
     level = mc.overworld()
     player = (await level.get_players())[0]
-    await mc.set_overhead_view(True)
+    await player.set_overhead_view(True)
     bx, by, bz = map(int, await player.get_pos())
 
     await reset_mine(level, bx, by, bz)
