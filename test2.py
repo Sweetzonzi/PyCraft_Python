@@ -22,7 +22,7 @@ async def main():
             print("没有找到 UAV")
             return
         print("UAV列表:", uavs)
-        uav = UavEntity(client, uavs[2]["agent_id"])
+        uav = UavEntity(client, uavs[0]["agent_id"])
 
         # 获取当前状态
         state = await uav.get_state()
