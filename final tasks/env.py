@@ -47,8 +47,8 @@ async def generate_env():
     level = client.overworld()
     players = await level.get_players()
     player = players[0]
-    x, base_y, z = await player.get_pos()
-    await level.set_blocks(x-120,base_y,z-120,x+120,base_y+20,z+120,"minecraft:air")
+    base_x, base_y, base_z = await player.get_pos()
+    await level.set_blocks(base_x-120,base_y,base_z-120,base_x+120,base_y+20,base_z+120,"minecraft:air")
     houses = []
     obstacles = []
 
@@ -56,15 +56,15 @@ async def generate_env():
         x = random.randint(-WORLD_SIZE, WORLD_SIZE)
         z = random.randint(-WORLD_SIZE, WORLD_SIZE)
         if is_far_enough((x, z), houses):
-            await build_house(level, x, base_y, z)
-            houses.append((x + HOUSE_SIZE//2, base_y, z + HOUSE_SIZE//2))
+            await build_house(level, base_x + x, base_y, base_z + z)
+            houses.append((base_x + x + HOUSE_SIZE//2, base_y, base_z + z + HOUSE_SIZE//2))
 
     while len(obstacles) < NUM_TREES:
         x = random.randint(-WORLD_SIZE, WORLD_SIZE)
         z = random.randint(-WORLD_SIZE, WORLD_SIZE)
         if is_far_enough((x, z), houses, 5):
-            await build_tree(level, x, base_y, z)
-            obstacles.append((x, base_y, z))
+            await build_tree(level, base_x + x, base_y, base_z + z)
+            obstacles.append((base_x + x, base_y, base_z + z))
 
     # 保存地图数据
     data = {
