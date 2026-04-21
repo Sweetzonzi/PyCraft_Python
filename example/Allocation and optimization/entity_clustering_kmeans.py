@@ -12,11 +12,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pycraft import PyModClient
 
-# 实体类型列表（三种友好实体：猪、牛、村民）
+# 实体类型列表（三种友好实体：猪、牛、猫）
 FRIENDLY_ENTITIES = [
     "minecraft:cow",
     "minecraft:pig",
-    "minecraft:villager",
+    "minecraft:cat",
 ]
 
 

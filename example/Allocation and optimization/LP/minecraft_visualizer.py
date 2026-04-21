@@ -409,10 +409,6 @@ class MinecraftVisualizer:
         await self.create_sign_board(level, area_info, solution, objective, plots)
 
         # 5. 不再创建图例（根据用户要求删除四个独立田块）
-
-        # 6. 添加照明（确保整个区域亮度充足） - 已简化，移除光源
-        # await self._add_lighting(level, area_info)
-
         elapsed_time = time.time() - start_time
         print(f"\n" + "="*60)
         print(f"农田构建完成！耗时: {elapsed_time:.1f}秒")
@@ -478,13 +474,7 @@ class MinecraftVisualizer:
         print(f"  外围围栏完成: 西({west_x}) 东({east_x}) 南({south_z}) 北({north_z})")
         print(f"  围栏尺寸: {total_width + 2}×{total_depth + 2}")
 
-    async def _add_lighting(self, level, area_info: dict):
-        """添加照明（已简化，不添加光源）"""
-        print("跳过照明添加（简化可视化）...")
-        # 简化可视化：不需要光源
 
-
-# 简化版可视化（不连接Minecraft）
 class ConsoleVisualizer:
     """控制台可视化器（用于测试）"""
 

@@ -39,13 +39,6 @@ DEFAULT_CROP_VALUES = {
     "甜菜根": {"value": 10.0, "work_time_per_harvest": 2.0}
 }
 
-#没啥用 ai写的垃圾
-def print_banner():
-    """打印程序横幅"""
-    print("\n" + "="*70)
-    print("        种地问题线性规划求解与可视化")
-    print("        在《我的世界》中展示最优农田规划")
-    print("="*70)
 def input_float(prompt: str, default: float = None, min_val: float = 0.0) -> float:
     """获取浮点数输入，支持默认值和最小值验证"""
     while True:
@@ -142,7 +135,6 @@ def print_problem_description(crop_config=None):
             work_times.append(DEFAULT_CROP_VALUES[crop]["work_time_per_harvest"])
 
     print(f"  5. 工作时长: 小麦{work_times[0]}, 胡萝卜{work_times[1]}, 马铃薯{work_times[2]}, 甜菜根{work_times[3]}小时/次")
-
     print("  6. 周期长度: 24000游戏刻（1个Minecraft日）")
     print("  7. 总工作时长: 40小时/周期")
     print("  8. 目标: 最大化一个周期内的总收益")
@@ -306,9 +298,6 @@ async def run_console_mode(plots, solution, objective):
 
 async def main():
     """主函数"""
-    # 打印横幅
-    print_banner()
-
     # 获取作物参数配置
     crop_config = get_crop_value_and_worktime()
 
