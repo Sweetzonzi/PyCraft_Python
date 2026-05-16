@@ -1,46 +1,31 @@
 import asyncio
 from pycraft.client import PyModClient
-
-"""
-async def get_uav_list(client):
-    resp = await client.request("get_uav_list", {})
-    if not resp.get("success"):
-        raise Exception(resp.get("error_message"))
-    return resp["data"]["uavs"]
-"""
+from pycraft.api.uav import UavEntity
 
 async def main():
     mc = PyModClient("localhost", 8086)
     await mc.connect()
     print("Connected to server")
     try:
-        """
-        
-        """
         overworld = mc.overworld()
+        """
         players = await overworld.get_players()
         player = players[0]
         x,y,z = await player.get_pos()
-        uav = await overworld.spawn_uav(x, y, z)
+        """
         # 获取 UAV 列表
         uavs = await overworld.get_uav_list()
         if len(uavs) == 0:
             print("没有找到 UAV")
             return
         print("UAV列表:", uavs)
-
-        # 获取当前状态
+        uav = UavEntity(overworld, uavs[0]["agent_id"])
         state = await uav.get_state()
         print("当前状态:", state)
 
         # 先悬停在当前高度
         await uav.set_target(state["x"], state["y"], state["z"])
         await asyncio.sleep(2)
-
-        # 起飞（升高）
-        print("起飞")
-        await uav.set_target(state["x"], state["y"] + 10, state["z"])
-        await asyncio.sleep(5)
 
         # 方形巡航路径
         path = [
@@ -60,13 +45,6 @@ async def main():
             state = await uav.get_state()
             print("当前状态:", state)
         print("巡航结束，返回原点")
-
-        # 回到原点
-        await uav.set_target(state["x"], state["y"], state["z"])
-        await asyncio.sleep(5)
-        print("完成")
-        await overworld.remove_uav(uav.agent_id)
-        print("已删除")
     
     finally:
         await mc.close()

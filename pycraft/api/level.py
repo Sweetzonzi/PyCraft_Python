@@ -1,5 +1,6 @@
 # pycraft/api/level.py
 import asyncio
+from pycraft.api.uav import UavEntity
 
 class Level:
     """
@@ -161,6 +162,58 @@ class Level:
 
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
+        
+    async def spawn_uav(self, x, y, z):
+        """
+        在游戏中生成uav agent
+        """
+        resp = await self._client.request(
+            "spawn_uav",
+            {
+                "x": float(x),
+                "y": float(y),
+                "z": float(z)
+            }
+        )
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+        agent_id = resp["data"]["agent_id"]
+        return UavEntity(self, agent_id)
+
+    async def get_uav_list(self):
+        """
+        获取无人机列表
+        """
+        resp = await self._client.request("get_uav_list", {})
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+        return resp["data"]["uavs"]
+    
+    async def remove_uav(self, agent_id):
+        """
+        删除指定ID的无人机
+        """
+        resp = await self._client.request(
+            "remove_uav",
+            {
+                "agent_id": int(agent_id)
+            }
+        )
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+        return True
+    
+    async def clear_uav(self):
+        """
+        清除环境内所有的无人机
+        """
+        resp = await self._client.request(
+            "clear_uav",
+            {}
+        )
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+        return True
 
 # ----- 测试与示例代码 -----
 async def main():

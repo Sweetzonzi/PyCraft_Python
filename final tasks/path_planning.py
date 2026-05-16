@@ -157,7 +157,7 @@ async def main():
 
         # 显示路径
         draw_path = [(x, base_y + FLY_HEIGHT, z) for x, z in world_path]
-        await level.draw_path(draw_path, duration=20000)
+        await level.draw_path(draw_path, duration=2000)
         # 飞行
         uav = UavEntity(client, task["uav_id"])
         for x, z in world_path:

@@ -82,7 +82,7 @@ class PyModClient:
             await self.writer.wait_closed()
 
     # ----- 高层 API -----
-    async def get_levels(self) -> List['Level']:
+    async def get_levels(self):
         """获取所有可用维度，返回 Level 对象列表"""
         resp = await self.request("list_level", {})
         if not resp.get("success"):
