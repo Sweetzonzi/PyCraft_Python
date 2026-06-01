@@ -172,7 +172,11 @@ class AuctionSimulator:
 
         # 田地布局参数
         self.field_spacing = 20  # 田地间距
-        self.base_y = 64  # 基础Y坐标
+
+        # 默认基准位置。程序启动后会根据玩家当前位置和脚下地面自动更新。
+        self.base_x = 0
+        self.base_y = 64
+        self.base_z = 0
 
         # 延迟控制
         self.delay_between_steps = 2.0  # 默认2秒延迟
@@ -184,8 +188,18 @@ class AuctionSimulator:
         self.level = self.client.overworld()
         print("连接成功！")
 
-        # 清理区域（可选）
+        # 先根据玩家位置更新生成基准点：
+        # base_x/base_z 使用玩家所在位置，base_y 使用玩家下方第一个非空气方块高度。
+        await self.update_base_position_from_player()
+
+        # 清理玩家附近区域（可选）
         await self.clear_area()
+
+        # 如果是重新开始，先清空旧的Python侧数据，避免重复追加
+        self.fields.clear()
+        self.entities.clear()
+        self.history.clear()
+        self.decision_history.clear()
 
         # 创建田地
         await self.create_fields()
@@ -199,53 +213,100 @@ class AuctionSimulator:
         # 显示初始状态
         await self.visualize_state()
 
-    async def clear_area(self):
-        """清理区域（创建一块平地）"""
-        print("正在清理区域...")
-        # 清理一个较大的区域
-        x1, z1 = -50, -30
-        x2, z2 = 50, 30
-        y = self.base_y - 1
 
-        # 创建草地方块
-        await self.level.set_blocks(x1, y, z1, x2, y, z2, "minecraft:grass_block")
-        # 清理上方的方块
-        await self.level.set_blocks(x1, y+1, z1, x2, y+10, z2, "minecraft:air")
-        print("区域清理完成")
+    async def find_ground_y_below_player(self, x: int, start_y: int, z: int) -> int:
+        """
+        从玩家当前位置向下扫描，寻找第一个非空气方块的高度。
+        """
+        min_y = -64
 
-    async def clear_existing_villagers(self):
-        """清理现有的村民实体（避免村民数量过多）"""
-        print("正在清理现有村民...")
+        air_blocks = {
+            "",
+            "air",
+            "minecraft:air",
+            "minecraft:cave_air",
+            "minecraft:void_air"
+        }
+
+        for y in range(start_y, min_y - 1, -1):
+            try:
+                block_name = await self.level.get_block(x, y, z)
+
+                if block_name not in air_blocks:
+                    print(f"检测到地面方块: {block_name} at ({x}, {y}, {z})")
+                    return y
+
+            except Exception as e:
+                print(f"获取方块失败: ({x}, {y}, {z}), 错误: {e}")
+                break
+
+        print("未能扫描到非空气方块，使用玩家脚下估计高度")
+        return start_y - 1
+
+    async def update_base_position_from_player(self):
+        """
+        根据玩家当前位置确定农田生成基准位置。
+
+        逻辑：
+        1. 获取当前玩家位置；
+        2. 使用玩家所在 x、z 作为农田中心参考点；
+        3. 从玩家当前位置向下扫描第一个非空气方块；
+        4. 使用找到的地面高度作为农田生成高度 base_y。
+        """
+        print("正在获取玩家当前位置，用于确定农田生成高度和位置...")
+
         try:
-            # 尝试获取区域内的所有实体
-            # 注意：Pycraft API可能没有直接获取实体的方法，这里尝试使用命令
-            clear_x1, clear_z1 = -50, -30
-            clear_x2, clear_z2 = 50, 30
-            clear_y1 = self.base_y - 10
-            clear_y2 = self.base_y + 10
+            players = await self.level.get_players()
 
-            # 尝试执行命令清理村民
-            command = f"/kill @e[type=minecraft:villager,x={clear_x1},y={clear_y1},z={clear_z1},dx={clear_x2-clear_x1},dy={clear_y2-clear_y1},dz={clear_z2-clear_z1}]"
-            resp = await self.client.request("execute_command", {
-                "level": self.level.name,
-                "command": command
-            })
-            if resp.get("success"):
-                print("已清理区域内的村民")
-            else:
-                print("清理村民命令执行失败（可能没有村民或命令不被支持）")
+            if not players:
+                print("没有找到玩家，继续使用默认生成位置")
+                print(f"默认生成位置: base_x={self.base_x}, base_y={self.base_y}, base_z={self.base_z}")
+                return
+
+            player = players[0]
+            px, py, pz = await player.get_pos()
+
+            self.base_x = int(round(px))
+            self.base_z = int(round(pz))
+
+            # 从玩家当前位置稍微往上开始扫描，防止半砖、作物、水面等特殊情况导致判断偏低
+            start_y = int(py) + 2
+            ground_y = await self.find_ground_y_below_player(self.base_x, start_y, self.base_z)
+            self.base_y = ground_y
+
+            print(f"玩家当前位置: x={px:.2f}, y={py:.2f}, z={pz:.2f}")
+            print(f"检测到玩家下方地面高度: ground_y={ground_y}")
+            print(f"农田生成基准位置: base_x={self.base_x}, base_y={self.base_y}, base_z={self.base_z}")
+
         except Exception as e:
-            print(f"清理村民时出错（可能API不支持）: {e}")
-            # 如果无法清理，只打印警告
-            print("警告：无法清理现有村民，可能会有多余的村民")
+            print(f"获取玩家位置或扫描地面失败，继续使用默认生成位置: {e}")
+            print(f"默认生成位置: base_x={self.base_x}, base_y={self.base_y}, base_z={self.base_z}")
+
+    async def clear_area(self):
+        """清理玩家附近区域，并创建一块与玩家脚下地面等高的平地"""
+        print("正在清理玩家附近区域...")
+
+        x1 = self.base_x - 50
+        x2 = self.base_x + 50
+        z1 = self.base_z - 30
+        z2 = self.base_z + 30
+        y = self.base_y
+
+        # 在检测到的地面高度铺草方块
+        await self.level.set_blocks(x1, y, z1, x2, y, z2, "minecraft:grass_block")
+
+        # 清理上方空间，避免树木、草、方块挡住农田和村民
+        await self.level.set_blocks(x1, y + 1, z1, x2, y + 10, z2, "minecraft:air")
+
+        print(f"区域清理完成: X=[{x1}, {x2}], Y={y}, Z=[{z1}, {z2}]")
 
     async def create_fields(self):
         """创建三块田地"""
         print("正在创建田地...")
 
-        # 田地中心X坐标（等距排列）
-        start_x = -self.field_spacing
-        base_z = 0
+        # 田地围绕玩家当前位置等距排列
+        start_x = self.base_x - self.field_spacing
+        base_z = self.base_z
 
         for i in range(self.num_fields):
             center_x = start_x + i * self.field_spacing
@@ -375,9 +436,6 @@ class AuctionSimulator:
         """创建拍卖参与者和观察者"""
         print("正在创建拍卖参与者...")
 
-        # 清理现有村民，避免村民数量过多
-        await self.clear_existing_villagers()
-
         # 首先获取现有玩家作为观察者
         try:
             players = await self.level.get_players()
@@ -385,9 +443,9 @@ class AuctionSimulator:
             print(f"找到 {len(players)} 个观察者玩家")
 
             # 将玩家传送到观察位置（田地后方的高处）
-            observer_x = 0  # 中间位置
+            observer_x = self.base_x  # 玩家附近中间位置
             observer_y = self.base_y + 10  # 高处
-            observer_z = -20  # 田地后方
+            observer_z = self.base_z - 20  # 田地后方
 
             for i, player in enumerate(players):
                 try:
@@ -402,10 +460,10 @@ class AuctionSimulator:
         # 创建村民等待区（与田地等高的平台）
         print("正在创建村民等待区...")
         wait_area_y = self.base_y  # 与田地等高
-        wait_area_z_start = 8  # 田地前方
-        wait_area_z_end = 12
-        wait_area_x_start = -30
-        wait_area_x_end = 30
+        wait_area_z_start = self.base_z + 8  # 田地前方
+        wait_area_z_end = self.base_z + 12
+        wait_area_x_start = self.base_x - 30
+        wait_area_x_end = self.base_x + 30
 
         # 创建石头平台
         await self.level.set_blocks(

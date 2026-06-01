@@ -1,7 +1,3 @@
-"""
-《我的世界》可视化引擎 - 将农田规划结果可视化到Minecraft中
-"""
-
 import asyncio
 import time
 from typing import List, Tuple, Optional
@@ -10,6 +6,14 @@ import math
 import numpy as np
 
 from farm_planner import FarmPlot, FarmPlanner
+
+AIR_BLOCKS = {
+    "minecraft:air",
+    "air",
+    "minecraft:cave_air",
+    "minecraft:void_air",
+    ""
+}
 
 
 @dataclass
@@ -24,8 +28,6 @@ class VisualizationConfig:
 
 
 class MinecraftVisualizer:
-    """《我的世界》可视化引擎"""
-
     # 方块类型定义
     FARMLAND = "minecraft:farmland"
     WATER = "minecraft:water"
@@ -39,7 +41,7 @@ class MinecraftVisualizer:
     STONE = "minecraft:stone"
     BEDROCK = "minecraft:bedrock"
 
-    # 作物方块映射（使用基础方块类型）
+    # 作物方块
     CROP_BLOCKS = {
         '小麦': "minecraft:wheat",        # 小麦作物
         '胡萝卜': "minecraft:carrots",    # 胡萝卜作物
@@ -50,7 +52,7 @@ class MinecraftVisualizer:
     def __init__(self, client, base_x: int = 0, base_y: int = 60, base_z: int = 0,
                  config: Optional[VisualizationConfig] = None):
         """
-        初始化可视化引擎
+        初始化可视化
         client: PyModClient实例
         base_x, base_y, base_z: 基准坐标
         config: 可视化配置
@@ -63,6 +65,65 @@ class MinecraftVisualizer:
 
         # 作物方块选择
         self.crop_blocks = self.CROP_BLOCKS
+
+    async def find_ground_y_below_player(self, level, x: int, start_y: int, z: int, min_y: int = -64) -> int:
+        """
+        从玩家当前位置向下扫描，寻找第一个非空气方块的高度。
+        直接使用 level.py 中已经封装好的 level.get_block()。
+        """
+        print(f"开始向下扫描真实地面: x={x}, start_y={start_y}, z={z}")
+
+        for y in range(start_y, min_y - 1, -1):
+            try:
+                block_name = await level.get_block(x, y, z)
+
+                if block_name not in AIR_BLOCKS:
+                    print(f"检测到地面方块: {block_name} at ({x}, {y}, {z})")
+                    return y
+
+            except Exception as e:
+                print(f"获取方块失败: ({x}, {y}, {z}), 错误: {e}")
+                break
+
+        fallback_y = start_y - 1
+        print(f"未能扫描到非空气方块，使用估计高度: y={fallback_y}")
+        return fallback_y
+
+    async def update_base_position_from_player(self, level):
+        """
+        根据玩家当前位置更新可视化基准坐标。
+        """
+        print("正在根据玩家当前位置更新农田生成基准坐标...")
+
+        try:
+            players = await level.get_players()
+
+            if not players:
+                print("没有找到玩家，继续使用当前基准坐标")
+                print(f"当前基准坐标: ({self.base_x}, {self.base_y}, {self.base_z})")
+                return
+
+            player = players[0]
+            px, py, pz = await player.get_pos()
+
+            player_x = int(round(px))
+            player_z = int(round(pz))
+
+            # 从玩家当前位置稍微往上开始扫，避免半砖、作物、水面等情况造成误判
+            start_y = int(py) + 2
+            ground_y = await self.find_ground_y_below_player(level, player_x, start_y, player_z)
+
+            self.base_x = player_x
+            self.base_y = ground_y
+            self.base_z = player_z
+
+            print(f"玩家当前位置: x={px:.2f}, y={py:.2f}, z={pz:.2f}")
+            print(f"检测到玩家下方真实地面高度: ground_y={ground_y}")
+            print(f"更新后的农田基准坐标: ({self.base_x}, {self.base_y}, {self.base_z})")
+
+        except Exception as e:
+            print(f"获取玩家位置或扫描地面失败，继续使用当前基准坐标: {e}")
+            print(f"当前基准坐标: ({self.base_x}, {self.base_y}, {self.base_z})")
 
     async def prepare_terrain(self, level, plots: List[FarmPlot], margin: int = 5):
         """
@@ -362,6 +423,9 @@ class MinecraftVisualizer:
         print("="*60)
 
         start_time = time.time()
+
+        # 在准备地形前，先把基准高度更新到玩家下方真实地面
+        await self.update_base_position_from_player(level)
 
         # 1. 准备地形
         area_info = await self.prepare_terrain(level, plots)

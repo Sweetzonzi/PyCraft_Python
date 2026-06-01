@@ -3,9 +3,7 @@ import sys
 import os
 import numpy as np
 from typing import Optional, Tuple
-'''
-防止路径识别不出来(ai)
-'''
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 try:
     current_dir = os.fsdecode(os.fsencode(current_dir))

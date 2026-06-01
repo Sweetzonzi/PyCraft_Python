@@ -1,7 +1,3 @@
-"""
-农田规划模块 - 将线性规划解转换为具体的农田布局
-"""
-
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional
 import numpy as np
