@@ -180,6 +180,24 @@ class Level:
         agent_id = resp["data"]["agent_id"]
         return UavEntity(self, agent_id)
 
+    async def spawn_algorithm(self, x, y, z):
+        """
+        在游戏中生成 AlgorithmAgent，并返回 agent_id
+        """
+        resp = await self._client.request(
+            "spawn_algorithm",
+            {
+                "x": float(x),
+                "y": float(y),
+                "z": float(z)
+            }
+        )
+
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message"))
+
+        return resp["data"]["agent_id"]
+
     async def get_uav_list(self):
         """
         获取无人机列表
@@ -214,6 +232,96 @@ class Level:
         if not resp.get("success"):
             raise Exception(resp.get("error_message"))
         return True
+
+    async def set_container_item(self, x, y, z, slot, item, count=1):
+        """
+        向指定容器槽位放入物品。
+        """
+        if not isinstance(item, str):
+            raise TypeError("item must be a string")
+
+        if ":" not in item:
+            item = f"minecraft:{item}"
+
+        slot = int(slot)
+        count = int(count)
+
+        if slot < 0:
+            raise ValueError("slot cannot be negative")
+        if count <= 0:
+            raise ValueError("count must be greater than 0")
+        resp = await self._client.request(
+            "set_container_item",
+            {
+                "level": self.name,
+                "x": int(x),
+                "y": int(y),
+                "z": int(z),
+                "slot": slot,
+                "item": item,
+                "count": count
+            }
+        )
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message","Failed to set container item"))
+        return resp["data"]
+
+    async def get_container_items(self, x, y, z):
+        """
+        获取指定容器中所有非空槽位的物品。
+        """
+        resp = await self._client.request(
+            "get_container_items",
+            {
+                "level": self.name,
+                "x": int(x),
+                "y": int(y),
+                "z": int(z)
+            }
+        )
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message","Failed to get container items"))
+        return resp["data"]["items"]
+
+    async def get_container_info(self, x, y, z):
+        """
+        获取容器的完整信息。
+        """
+        resp = await self._client.request(
+            "get_container_items",
+            {
+                "level": self.name,
+                "x": int(x),
+                "y": int(y),
+                "z": int(z)
+            }
+        )
+
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message","Failed to get container items"))
+        return resp["data"]
+
+    async def take_container_item(self,player_id,x,y,z,slot,count=1):
+        """
+        从容器指定槽位取出物品，并放入玩家背包。
+        """
+        resp = await self._client.request(
+            "take_container_item",
+            {
+                "level": self.name,
+                "player_id": int(player_id),
+                "x": int(x),
+                "y": int(y),
+                "z": int(z),
+                "slot": int(slot),
+                "count": int(count)
+            }
+        )
+
+        if not resp.get("success"):
+            raise Exception(resp.get("error_message","Failed to take container item"))
+
+        return resp["data"]
 
 # ----- 测试与示例代码 -----
 async def main():
